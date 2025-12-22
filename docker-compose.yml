@@ -1,0 +1,26 @@
+services:
+  pizza-mongodb:
+    image: mongo:latest
+    container_name: pizza-mongodb
+    restart: unless-stopped
+    command: [ 'mongod', '--replSet', 'rs0' ]
+    ports:
+      - 27017:27017
+    volumes:
+      - ./data/mongo:/data/db
+    networks:
+      - pizza_network
+
+  pizza-redis:
+    image: redis:7.2.4-alpine3.19
+    container_name: pizza-redis
+    restart: unless-stopped
+    command: redis-server
+    ports:
+      - 6379:6379
+    networks:
+      - pizza_network
+
+networks:
+  pizza_network:
+    external: true

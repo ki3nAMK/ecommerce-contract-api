@@ -1,0 +1,10 @@
+# EditorConfig helps maintain consistent coding styles for multiple developers working on the same project
+# See https://EditorConfig.org for more information
+
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
