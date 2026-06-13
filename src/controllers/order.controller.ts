@@ -91,6 +91,17 @@ export class OrdersController {
     return this.ordersService.getOrdersWithCountByBuyer(buyerId);
   }
 
+  // ✅ GET ORDERS BY SELLER + COUNT
+  @Get('seller')
+  @ApiOperation({ summary: 'Lấy danh sách order theo seller' })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách order và tổng số lượng của seller',
+  })
+  async getOrdersBySeller(@CurrentUserId() sellerId: string) {
+    return this.ordersService.getOrdersWithCountBySeller(sellerId);
+  }
+
   // ✅ GET ORDER DETAIL
   @Get(':orderId')
   @ApiOperation({ summary: 'Lấy chi tiết 1 order' })

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsMongoId } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsMongoId, IsOptional, IsBoolean } from 'class-validator';
 import { OrderType } from '@/enums/order-type.enum';
 
 export class UpdateItemStatusDto {
@@ -15,8 +15,18 @@ export class UpdateItemStatusDto {
     description: 'Trạng thái mới cho item (OrderType enum)',
     enum: OrderType,
     example: OrderType.DEPOSIT_ESCROW,
+    required: false,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsEnum(OrderType)
-  status: OrderType;
+  status?: OrderType;
+
+  @ApiProperty({
+    description: 'Đã verify bởi seller chưa',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isVerifyBySeller?: boolean;
 }

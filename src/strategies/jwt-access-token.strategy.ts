@@ -6,7 +6,7 @@ import { AppRequest } from '@/interfaces/app-request.interface';
 import { TokenPayload } from '@/interfaces/token-payload.interface';
 import { UsersRepository } from '@/models/repos/user.repo';
 import { SessionService } from '@/services/session.service';
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
@@ -32,6 +32,12 @@ export class JwtAccessTokenStrategy extends PassportStrategy(Strategy) {
 
     if (req.adminRoute || !req.skipVerification) {
       const user = await this.userRepository.findOneById(userId);
+
+      if (!user) {
+        throw new UnauthorizedException({
+          code: ErrorDictionary.UNAUTHORIZED,
+        });
+      }
 
       if (req.adminRoute) {
         if (user.role !== Role.ADMIN) {

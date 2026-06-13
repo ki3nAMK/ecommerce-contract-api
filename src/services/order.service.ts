@@ -1,5 +1,6 @@
 import { OrderType } from '@/enums/order-type.enum';
 import { Order } from '@/models/entities/order.entity';
+import { Product } from '@/models/entities/product.entity';
 import { OrdersRepository } from '@/models/repos/order.repo';
 import {
   CreateOrderDto,
@@ -19,6 +20,7 @@ export class OrdersService {
   constructor(
     private readonly ordersRepository: OrdersRepository,
     @InjectModel(Order.name) private readonly orderModel: Model<Order>,
+    @InjectModel(Product.name) private readonly productModel: Model<Product>,
   ) {}
 
   async createOrder(dto: CreateOrderDto, buyerId: string): Promise<Order> {
@@ -70,7 +72,14 @@ export class OrdersService {
       .find({
         buyer: new Types.ObjectId(buyerId),
       })
-      .populate('items.productId');
+      .populate({
+        path: 'items.productId',
+        model: 'Product',
+      })
+      .populate({
+        path: 'buyer',
+        model: 'User',
+      });
 
     const count = await this.orderModel.countDocuments({
       buyer: new Types.ObjectId(buyerId),
@@ -82,19 +91,32 @@ export class OrdersService {
     };
   }
 
-  async getOrderDetail(orderId: string, buyerId: string) {
+  async getOrderDetail(orderId: string, userId: string) {
     const order = (await this.orderModel
       .findOne({
         _id: new Types.ObjectId(orderId),
-        buyer: new Types.ObjectId(buyerId),
       })
       .populate({
         path: 'items.productId',
         model: 'Product',
       })
-      .lean()) as Order;
+      .populate({
+        path: 'buyer',
+        model: 'User',
+      })
+      .lean()) as any;
 
     if (!order) {
+      throw new NotFoundException('Không tìm thấy order này');
+    }
+
+    const orderBuyerId = order.buyer?._id ? order.buyer._id.toString() : order.buyer?.toString();
+    const isBuyer = orderBuyerId === userId;
+    const isSeller = order.items.some(
+      (item: any) => item.productId && item.productId.sellerId?.toString() === userId
+    );
+
+    if (!isBuyer && !isSeller) {
       throw new NotFoundException('Không tìm thấy order này');
     }
 
@@ -118,11 +140,80 @@ export class OrdersService {
       );
     }
 
-    console.log('Update item:', item.productId, '→', dto.status);
+    console.log('Update item:', item.productId, '→', dto.status, dto.isVerifyBySeller);
 
-    item.status = dto.status;
+    const oldStatus = item.status;
+
+    if (dto.status) {
+      item.status = dto.status;
+    }
+    if (dto.isVerifyBySeller !== undefined) {
+      item.isVerifyBySeller = dto.isVerifyBySeller;
+    }
+
+    // Decrement available stock when Buyer deposits Escrow
+    if (dto.status === OrderType.DEPOSIT_ESCROW && oldStatus !== OrderType.DEPOSIT_ESCROW) {
+      const product = await this.productModel.findById(item.productId);
+      if (product) {
+        product.available = Math.max(0, product.available - item.quantity);
+        await product.save();
+        console.log(`Deducted stock for product ${product._id}: -${item.quantity}. New available: ${product.available}`);
+      }
+    }
+
+    // Restore stock if the order is cancelled
+    if (dto.status === OrderType.CANCLED && oldStatus !== OrderType.CANCLED) {
+      if (oldStatus === OrderType.DEPOSIT_ESCROW || oldStatus === OrderType.FULLY_DEPOSITED) {
+        const product = await this.productModel.findById(item.productId);
+        if (product) {
+          product.available += item.quantity;
+          await product.save();
+          console.log(`Restored stock for product ${product._id}: +${item.quantity}. New available: ${product.available}`);
+        }
+      }
+    }
 
     await order.save();
     return order;
+  }
+
+  async getOrdersWithCountBySeller(sellerId: string): Promise<{
+    items: Order[];
+    count: number;
+  }> {
+    const items = await this.orderModel.aggregate([
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'items.productId',
+          foreignField: '_id',
+          as: 'populatedProducts',
+        },
+      },
+      {
+        $match: {
+          'populatedProducts.sellerId': new Types.ObjectId(sellerId),
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+    ]);
+
+    const populatedItems = await this.orderModel.populate(items, [
+      {
+        path: 'items.productId',
+        model: 'Product',
+      },
+      {
+        path: 'buyer',
+        model: 'User',
+      },
+    ]);
+
+    return {
+      items: populatedItems,
+      count: populatedItems.length,
+    };
   }
 }

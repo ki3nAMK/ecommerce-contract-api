@@ -82,7 +82,7 @@ export class UsersService extends BaseServiceAbstract<User> {
   async getByPublicAddress(publicAddress: string): Promise<User> {
     return this.user_model
       .findOne({
-        publicAddress: publicAddress,
+        publicAddress: { $regex: new RegExp(`^${publicAddress}$`, 'i') },
       })
       .select('+password')
       .exec();

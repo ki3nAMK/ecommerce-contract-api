@@ -2,6 +2,7 @@ import { BaseServiceAbstract } from '@/base/abstract-service.base';
 import { Product } from '@/models/entities/product.entity';
 import { ProductsRepository } from '@/models/repos/product.repo';
 import { PaginationDto } from '@/models/requests/pagination.request';
+import { toObjectId } from '@/utils/helper';
 import { Injectable } from '@nestjs/common';
 import { FilterQuery } from 'mongoose';
 
@@ -17,6 +18,9 @@ export class ProductService extends BaseServiceAbstract<Product> {
   ) {
     const { page = 1, limit = 10 } = pagination;
     const skip = (page - 1) * limit;
+
+    console.log('filter: ', filter)
+
 
     const [items, total] = await Promise.all([
       this.product_repository.findWithPopulate(filter, skip, limit),
@@ -48,7 +52,7 @@ export class ProductService extends BaseServiceAbstract<Product> {
 
   async findBySeller(sellerId: string, pagination: PaginationDto) {
     return this.findAllWithPagination(pagination, {
-      sellerId,
+      sellerId: toObjectId(sellerId),
     });
   }
 

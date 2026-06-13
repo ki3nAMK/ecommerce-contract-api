@@ -8,7 +8,9 @@ import {
   HttpStatus,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAccessTokenGuard } from '@/guards';
 import { ApiOkResponse, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Products')
@@ -17,7 +19,7 @@ import { ApiOkResponse, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
   version: '1',
 })
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(private readonly productService: ProductService) { }
 
   @SkipVerification()
   @Get()
@@ -29,6 +31,22 @@ export class ProductController {
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   findAll(@Query() query: PaginationDto) {
     return this.productService.findAllWithPagination(query);
+  }
+
+  @UseGuards(JwtAccessTokenGuard)
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    description: 'Get my products (seller)',
+  })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  async findMyProducts(
+    @CurrentUserId() userId: string,
+    @Query() query: PaginationDto,
+  ) {
+    const res = await this.productService.findBySeller(userId, query);
+    return res;
   }
 
   @SkipVerification()
@@ -83,19 +101,5 @@ export class ProductController {
     @Query() query: PaginationDto,
   ) {
     return this.productService.findByCategory(category, query);
-  }
-
-  @Get('me')
-  @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({
-    description: 'Get my products (seller)',
-  })
-  @ApiQuery({ name: 'page', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, example: 10 })
-  findMyProducts(
-    @CurrentUserId() userId: string,
-    @Query() query: PaginationDto,
-  ) {
-    return this.productService.findBySeller(userId, query);
   }
 }

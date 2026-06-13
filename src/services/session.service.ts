@@ -192,7 +192,7 @@ export class SessionService extends BaseServiceAbstract<Session> {
         'user',
       );
 
-      if (!session) {
+      if (!session || !session.user) {
         await this.cacheDomain
           .getRedisClient()
           .sadd(RedisKey.BLACK_LIST_SESSIONS, sessionId);
