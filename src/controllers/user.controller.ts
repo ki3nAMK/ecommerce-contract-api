@@ -8,6 +8,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -27,7 +28,15 @@ export class UserController {
   @SkipVerification()
   @Get('/me')
   async getMe(@CurrentUserId() userId: string) {
+    await this.userService.ensureReferralCode(userId);
     const result = await this.userService.getById(userId);
     return result;
+  }
+
+  @ApiOkResponse({ type: () => User })
+  @HttpCode(HttpStatus.OK)
+  @Post('/me/become-affiliate')
+  async becomeAffiliate(@CurrentUserId() userId: string) {
+    return this.userService.becomeAffiliate(userId);
   }
 }

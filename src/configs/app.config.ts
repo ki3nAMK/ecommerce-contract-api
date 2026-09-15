@@ -99,6 +99,14 @@ export interface Configuration {
     apiKey: string;
     url: string;
   };
+  publicUrl: string;
+  blockchain: {
+    rpcUrl: string;
+    adminPrivateKey: string;
+    erc1155Address: string;
+    escrowAddress: string;
+    airdropAddress: string;
+  };
 }
 
 const redisLockSchema = joi.object({
@@ -143,11 +151,20 @@ const serverSchema = joi.object({
   masterKey: joi.string().required(),
 });
 
+const blockchainSchema = joi.object({
+  rpcUrl: joi.string().required(),
+  adminPrivateKey: joi.string().required(),
+  erc1155Address: joi.string().required(),
+  escrowAddress: joi.string().required(),
+  airdropAddress: joi.string().required(),
+});
+
 const configSchema = joi.object<Configuration>({
   port: joi.number().required(),
   isProd: joi.boolean().required(),
   prefix: joi.string().required(),
   version: joi.string().required(),
+  publicUrl: joi.string().required(),
 
   verificationPath: verificationPathSchema.required(),
 
@@ -157,6 +174,7 @@ const configSchema = joi.object<Configuration>({
   mongo: mongoSchema.required(),
   redisLock: redisLockSchema.required(),
   server: serverSchema.required(),
+  blockchain: blockchainSchema.required(),
 });
 
 export const loadConfiguration = (): Configuration => {

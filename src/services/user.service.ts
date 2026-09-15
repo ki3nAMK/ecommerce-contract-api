@@ -1,10 +1,12 @@
 import { BaseServiceAbstract } from '@/base/abstract-service.base';
+import { Role } from '@/enums/role.enum';
 import { User } from '@/models/entities/user.entity';
 import { UsersRepository } from '@/models/repos/user.repo';
 import { MetamaskRegisterRequest } from '@/models/requests/register-metamask.request';
 import { RegisterRequest } from '@/models/requests/register.request';
 import { avatarUrlDemo } from '@/utils/constants';
 import { convertObjectIdToString, getRandomAvatarColor } from '@/utils/helper';
+import { generateReferralCode } from '@/utils/referral-code.util';
 import { faker } from '@faker-js/faker';
 import {
   BadRequestException,
@@ -88,6 +90,42 @@ export class UsersService extends BaseServiceAbstract<User> {
       .exec();
   }
 
+  async getByReferralCode(code: string): Promise<User | null> {
+    return this.user_model.findOne({ referralCode: code }).exec();
+  }
+
+  async ensureReferralCode(userId: string): Promise<string> {
+    const existing = await this.user_model
+      .findById(userId)
+      .select('referralCode')
+      .lean()
+      .exec();
+
+    if (existing?.referralCode) {
+      return existing.referralCode;
+    }
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = generateReferralCode();
+      try {
+        await this.user_model
+          .updateOne(
+            { _id: userId, referralCode: { $exists: false } },
+            { $set: { referralCode: code } },
+          )
+          .exec();
+        return code;
+      } catch (error: any) {
+        if (error?.code === 11000) {
+          continue; // collision on generated code, retry
+        }
+        throw error;
+      }
+    }
+
+    throw new BadRequestException('Failed to generate referral code');
+  }
+
   async comparePassword(password: string, user: User): Promise<boolean> {
     return bcrypt.compare(password, user.password);
   }
@@ -120,6 +158,10 @@ export class UsersService extends BaseServiceAbstract<User> {
     if (users.length !== userIds.length) {
       throw new NotFoundException('User not found');
     }
+  }
+
+  async becomeAffiliate(userId: string): Promise<Partial<User>> {
+    return this.updateUser(userId, { role: Role.AFFILIATE });
   }
 
   async updateUser(

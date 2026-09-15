@@ -3,6 +3,7 @@ import {
   IsArray,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsPositive,
   IsString,
   ValidateNested,
@@ -36,4 +37,13 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
   items: CreateOrderItemDto[];
+
+  @ApiProperty({
+    description: 'Mã giới thiệu (referral code) được capture từ link ?ref=',
+    required: false,
+    example: '7F3K9QXZ',
+  })
+  @IsOptional()
+  @IsString()
+  referralCode?: string;
 }

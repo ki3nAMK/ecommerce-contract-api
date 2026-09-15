@@ -49,6 +49,9 @@ export class User extends BaseEntity {
   @Prop({ type: String, unique: true, required: true })
   publicAddress: string;
 
+  @Prop({ type: String, unique: true, sparse: true, index: true })
+  referralCode: string;
+
   async comparePassword(password: string): Promise<boolean> {
     return bcrypt.compare(password, this.password);
   }

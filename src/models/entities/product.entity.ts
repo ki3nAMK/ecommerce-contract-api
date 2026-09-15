@@ -91,6 +91,10 @@ export class Product extends BaseEntity {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   sellerId: Types.ObjectId | User;
 
+  // ⭐ On-chain ERC1155 token id (uint256, stored as string)
+  @Prop({ type: String })
+  tokenId: string;
+
   // ⭐ Trỏ tới danh sách Review
   @Prop({ type: [{ type: Types.ObjectId, ref: 'ProductReview' }], default: [] })
   reviews: (Types.ObjectId | ProductReview)[];

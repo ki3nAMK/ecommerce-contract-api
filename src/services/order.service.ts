@@ -7,6 +7,7 @@ import {
   CreateOrderItemDto,
 } from '@/models/requests/create-order.request';
 import { UpdateItemStatusDto } from '@/models/requests/update-order.request';
+import { UsersService } from '@/services/user.service';
 import {
   BadRequestException,
   Injectable,
@@ -19,6 +20,7 @@ import { Model, Types } from 'mongoose';
 export class OrdersService {
   constructor(
     private readonly ordersRepository: OrdersRepository,
+    private readonly usersService: UsersService,
     @InjectModel(Order.name) private readonly orderModel: Model<Order>,
     @InjectModel(Product.name) private readonly productModel: Model<Product>,
   ) {}
@@ -32,13 +34,47 @@ export class OrdersService {
       status: OrderType.NONE,
     }));
 
+    let referrerId: Types.ObjectId | null = null;
+    if (dto.referralCode) {
+      const referrerUser = await this.usersService.getByReferralCode(
+        dto.referralCode,
+      );
+      // invalid code or self-referral: silently ignore, order proceeds without a referrer
+      if (referrerUser && referrerUser._id.toString() !== buyerId) {
+        referrerId = referrerUser._id as Types.ObjectId;
+      }
+    }
+
     const order = new this.orderModel({
       buyer: new Types.ObjectId(buyerId),
       items,
       isCompleted: false,
+      referrer: referrerId,
     });
 
-    return order.save();
+    await order.save();
+    return order.populate({
+      path: 'referrer',
+      model: 'User',
+      select: 'publicAddress',
+    });
+  }
+
+  async hasCompletedOrderForProduct(
+    buyerId: string,
+    productId: string,
+  ): Promise<boolean> {
+    const exists = await this.orderModel.exists({
+      buyer: new Types.ObjectId(buyerId),
+      items: {
+        $elemMatch: {
+          productId: new Types.ObjectId(productId),
+          status: OrderType.DONE,
+        },
+      },
+    });
+
+    return !!exists;
   }
 
   async removeItemFromOrder(
@@ -79,10 +115,48 @@ export class OrdersService {
       .populate({
         path: 'buyer',
         model: 'User',
+      })
+      .populate({
+        path: 'referrer',
+        model: 'User',
+        select: 'publicAddress',
       });
 
     const count = await this.orderModel.countDocuments({
       buyer: new Types.ObjectId(buyerId),
+    });
+
+    return {
+      items,
+      count,
+    };
+  }
+
+  async getOrdersWithCountByReferrer(referrerId: string): Promise<{
+    items: Order[];
+    count: number;
+  }> {
+    const items = await this.orderModel
+      .find({
+        referrer: new Types.ObjectId(referrerId),
+      })
+      .populate({
+        path: 'items.productId',
+        model: 'Product',
+      })
+      .populate({
+        path: 'buyer',
+        model: 'User',
+        select: 'name publicAddress',
+      })
+      .populate({
+        path: 'referrer',
+        model: 'User',
+        select: 'publicAddress',
+      });
+
+    const count = await this.orderModel.countDocuments({
+      referrer: new Types.ObjectId(referrerId),
     });
 
     return {
@@ -103,6 +177,11 @@ export class OrdersService {
       .populate({
         path: 'buyer',
         model: 'User',
+      })
+      .populate({
+        path: 'referrer',
+        model: 'User',
+        select: 'publicAddress',
       })
       .lean()) as any;
 

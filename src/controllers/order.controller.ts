@@ -102,6 +102,17 @@ export class OrdersController {
     return this.ordersService.getOrdersWithCountBySeller(sellerId);
   }
 
+  // ✅ GET ORDERS REFERRED BY ME (AFFILIATE) + COUNT
+  @Get('referrer')
+  @ApiOperation({ summary: 'Lấy danh sách order được giới thiệu bởi affiliate hiện tại' })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách order và tổng số lượng do user hiện tại giới thiệu',
+  })
+  async getOrdersByReferrer(@CurrentUserId() referrerId: string) {
+    return this.ordersService.getOrdersWithCountByReferrer(referrerId);
+  }
+
   // ✅ GET ORDER DETAIL
   @Get(':orderId')
   @ApiOperation({ summary: 'Lấy chi tiết 1 order' })

@@ -34,6 +34,9 @@ export class Order extends BaseEntity {
 
   @Prop({ default: false })
   isCompleted: boolean;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  referrer: Types.ObjectId | User | null;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

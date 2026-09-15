@@ -1,6 +1,9 @@
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -12,9 +15,16 @@ import AppLoggerService from './services/app-logger.service';
 async function bootstrap() {
   process.env.TZ = 'Asia/Ho_Chi_Minh';
 
-  const app = await NestFactory.create(AppModule, {
+  const uploadsDir = join(process.cwd(), 'uploads', 'products');
+  if (!existsSync(uploadsDir)) {
+    mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
+
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 
   const configService = app.get(ConfigService);
 
@@ -34,7 +44,7 @@ async function bootstrap() {
     }),
   );
 
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
   app.use(cookieParser());
 

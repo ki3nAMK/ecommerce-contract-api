@@ -38,6 +38,18 @@ import { ClientGateway } from './gateways/client.gateway';
 import { OrdersService } from './services/order.service';
 import { OrdersRepository } from './models/repos/order.repo';
 import { OrdersController } from './controllers/order.controller';
+import { BlockchainService } from './services/blockchain.service';
+import {
+  AirdropCampaign,
+  AirdropCampaignSchema,
+} from './models/entities/airdrop-campaign.entity';
+import { AirdropCampaignsRepository } from './models/repos/airdrop-campaign.repo';
+import { AirdropService } from './services/airdrop.service';
+import {
+  AdminAirdropController,
+  AirdropController,
+} from './controllers/airdrop.controller';
+import { ProductReviewsService } from './services/product-review.service';
 
 @Module({
   imports: [
@@ -76,6 +88,10 @@ import { OrdersController } from './controllers/order.controller';
       {
         name: Order.name,
         schema: OrderSchema,
+      },
+      {
+        name: AirdropCampaign.name,
+        schema: AirdropCampaignSchema,
       },
     ]),
 
@@ -120,6 +136,8 @@ import { OrdersController } from './controllers/order.controller';
     UserController,
     ProductController,
     OrdersController,
+    AdminAirdropController,
+    AirdropController,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: AppClassSerializerInterceptor },
@@ -134,6 +152,9 @@ import { OrdersController } from './controllers/order.controller';
     SeedProductsService,
     ProductService,
     OrdersService,
+    BlockchainService,
+    AirdropService,
+    ProductReviewsService,
 
     // * repos
     UsersRepository,
@@ -141,6 +162,7 @@ import { OrdersController } from './controllers/order.controller';
     ProductReviewsRepository,
     ProductsRepository,
     OrdersRepository,
+    AirdropCampaignsRepository,
 
     // * strategies
     JwtAccessTokenStrategy,
